@@ -1,0 +1,6 @@
+TODO:
+
+1) Write a proper test suite.
+
+2) Make the module respect $/ and $. so that we have true line based reading of
+   textual Large Object Binaries (CLOBS).

@@ -1,0 +1,130 @@
+NAME
+       DBIx::BLOB::Handle - Read Database Large Object Binaries
+       from file handles
+
+SYNOPSIS
+       use DBI;
+
+       use DBIx::BLOB::Handle;
+
+       # use DBIx::BLOB::Handle qw( :INTO_STATEMENT );
+
+       $dbh = DBI->connect('DBI:Oracle:ORCL','scott','tiger',
+                           {RaiseError => 1, PrintError => 0 }
+                              )
+
+       or die 'Could not connect to database:' , DBI->errstr;
+
+       $dbh->{LongTruncOk} = 1; # very important!
+
+       $sql = 'select mylob from mytable where id = 1';
+
+       $sth = $dbh->prepare($sql);
+
+       $sth->execute;
+
+       $sth->fetch;
+
+       $fh = DBIx::BLOB::Handle->new($sth,0,4096);
+
+       ...
+
+       print while <$fh>;
+
+       # print $fh->getlines;
+
+       print STDERR 'Size of LOB was ' . $fh->tell . " bytes\n";
+
+       ...
+
+       # or if we used the dangerous :INTO_STATEMENT pragma,
+
+       # we could say:
+
+       # $fh = $sth->blob_as_handle(0,4096);
+
+       ...
+
+       $sth->finish;
+
+       $dbh->disconnect;
+
+DESCRIPTION AND RATIONALE
+       DBI has blob_copy_to_file method which takes a file handle
+       argument and copies a database large binary object (LOB)
+       to this file handle.  However, the method is faulty.
+       DBIx::BLOB::Handle constructs a tied filehandle that also
+       extends from IO::Handle and IO::Selectable. It wraps DBI's
+       blob_read method. By making LOB's available as a file han-
+       dle to read from we can process the data in a familiar
+       perly way.  Additionally, by making the module respect $/
+       and $. then we can read lines of text data from a textual
+       LOB (CLOB) and treat it just as we would any other file
+       handle (this last bit still to do!)
+
+CONSTRUCTOR
+       new
+           $fh = DBIx::BLOB::Handle->new($sth,$column,$block-
+           size);
+
+           $fh = $statement->blob_as_handle($column,$blocksize);
+
+       Constructs a new file handle from the given DBI statement,
+       given the column number (zero based) of the LOB within the
+       statement. The column number defaults to '0'. The block-
+       size argument specifies how many bytes at a time should be
+       read from the LOB and defaults to '4096'
+
+       ...
+
+       By 'use'ing the :INTO_STATEMENT pragma as follows;
+
+       use DBIx::BLOB::Handle qw( :INTO_STATEMENT );
+
+       DBIx::BLOB::Handle will install itself as a method of the
+       DBI::st (statement) class. Thus you can create a file han-
+       dle by calling
+
+           $fh = $statement->blob_as_handle($column,$blocksize);
+
+       which in turn calls new.
+
+METHODS
+       Currently only a subset of the Tied Handle interface is
+       implemented
+
+       $handle->getline, $handle->getlines, <$handle>
+           Read from the LOB.  getline, or <$handle> in scalar
+           context will return up to $blocksize bytes from the
+           current position within the LOB (see the 'new' con-
+           structor).  getlines or <$handle> in list context will
+           return the entire LOB
+
+       tell
+           $handle->tell;
+
+           tell $handle;
+
+       Gives the current position (in bytes, zero based) within
+       the LOB
+
+       eof
+           $handle->eof;
+
+           eof $handle;
+
+       Returns true if we have finished reading from the LOB.
+
+SEE ALSO
+       Perls Filehandle functions, the IO::Handle manpage, the
+       IO::Seekable manpage
+
+AUTHOR
+       Mark Southern (mark_southern@merck.com)
+
+COPYRIGHT
+       Copyright (c) 2002, Merck & Co. Inc. All Rights Reserved.
+       This module is free software. It may be used, redis-
+       tributed and/or modified under the terms of the Perl
+       Artistic License (see http://www.perl.com/perl/misc/Artis-
+       tic.html)
